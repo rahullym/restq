@@ -10,6 +10,13 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Cache Prisma client globally to avoid connection pool exhaustion
+// This is important in production where module reloads can create multiple instances
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
+} else {
+  // In production, always cache to prevent multiple instances
+  globalForPrisma.prisma = prisma
+}
 
 

@@ -10,57 +10,94 @@ export default async function RestaurantQueuePage({
 }) {
   try {
     const { restaurantSlug } = await params
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { slug: restaurantSlug },
-    })
+    
+    let restaurant
+    try {
+      restaurant = await prisma.restaurant.findUnique({
+        where: { slug: restaurantSlug },
+      })
+    } catch (dbError: any) {
+      console.error('Database error loading restaurant:', {
+        error: dbError?.message || dbError,
+        code: dbError?.code,
+        restaurantSlug,
+      })
+      // Re-throw with more context for error boundary
+      const error = new Error('Failed to connect to database')
+      error.cause = dbError
+      throw error
+    }
 
     if (!restaurant) {
       notFound()
     }
 
-    const queueStats = await getQueueStats(restaurant.id)
+    let queueStats
+    try {
+      queueStats = await getQueueStats(restaurant.id)
+    } catch (dbError: any) {
+      console.error('Database error loading queue stats:', {
+        error: dbError?.message || dbError,
+        code: dbError?.code,
+        restaurantId: restaurant.id,
+      })
+      // Use default stats if queue stats fail
+      queueStats = {
+        waitingCount: 0,
+        estimatedWaitMinutes: 0,
+        estimatedWaitTime: 'Ready now',
+      }
+    }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
-      <div className="max-w-md mx-auto px-4 py-6 sm:py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block p-3 bg-primary-100 rounded-full mb-4">
-            <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50">
+        <div className="max-w-md mx-auto px-4 py-6 sm:py-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-block p-3 bg-primary-100 rounded-full mb-4">
+              <svg className="w-12 h-12 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{restaurant.name}</h1>
+            <p className="text-base sm:text-lg text-gray-600">Join our waitlist in seconds</p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">{restaurant.name}</h1>
-          <p className="text-base sm:text-lg text-gray-600">Join our waitlist in seconds</p>
-        </div>
 
-        {/* Queue Stats Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-primary-100">
-          <div className="text-center">
-            <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Current Wait</div>
-            <div className="text-4xl sm:text-5xl font-bold text-primary-600 mb-3">
-              {queueStats.waitingCount}
-            </div>
-            <div className="text-base text-gray-600 mb-1">
-              {queueStats.waitingCount === 1 ? 'person' : 'people'} ahead of you
-            </div>
-            <div className="text-lg font-semibold text-gray-800">
-              ~{queueStats.estimatedWaitTime}
+          {/* Queue Stats Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-primary-100">
+            <div className="text-center">
+              <div className="text-sm text-gray-500 uppercase tracking-wide mb-2">Current Wait</div>
+              <div className="text-4xl sm:text-5xl font-bold text-primary-600 mb-3">
+                {queueStats.waitingCount}
+              </div>
+              <div className="text-base text-gray-600 mb-1">
+                {queueStats.waitingCount === 1 ? 'person' : 'people'} ahead of you
+              </div>
+              <div className="text-lg font-semibold text-gray-800">
+                ~{queueStats.estimatedWaitTime}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Queue Form */}
-        <QueueForm
-          restaurantSlug={restaurantSlug}
-          currentQueueCount={queueStats.waitingCount}
-          estimatedWaitTime={queueStats.estimatedWaitTime}
-        />
+          {/* Queue Form */}
+          <QueueForm
+            restaurantSlug={restaurantSlug}
+            currentQueueCount={queueStats.waitingCount}
+            estimatedWaitTime={queueStats.estimatedWaitTime}
+          />
+        </div>
       </div>
-    </div>
-  )
-  } catch (error) {
-    console.error('Error loading restaurant page:', error)
+    )
+  } catch (error: any) {
+    // Log detailed error information for debugging
+    console.error('Error loading restaurant page:', {
+      message: error?.message,
+      cause: error?.cause,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      name: error?.name,
+    })
+    
+    // Re-throw to trigger error boundary
     throw error
   }
 }
