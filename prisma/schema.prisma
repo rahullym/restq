@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QueueEntryStatus {
+  WAITING
+  CALLED
+  SEATED
+  NO_SHOW
+  CANCELLED
+}
+
+enum UserRole {
+  ADMIN
+}
+
+model Restaurant {
+  id                    String       @id @default(cuid())
+  name                  String
+  slug                  String       @unique
+  averageMinutesPerParty Int         @default(10)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  
+  queueEntries          QueueEntry[]
+  users                 UserRestaurant[]
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  role         UserRole          @default(ADMIN)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  
+  restaurants  UserRestaurant[]
+}
+
+model UserRestaurant {
+  id           String     @id @default(cuid())
+  userId       String
+  restaurantId String
+  createdAt    DateTime   @default(now())
+  
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, restaurantId])
+  @@index([userId])
+  @@index([restaurantId])
+}
+
+model QueueEntry {
+  id               String           @id @default(cuid())
+  restaurantId     String
+  name             String
+  mobileNumber     String
+  partySize        Int              @default(2)
+  seatingType      String?          // "Indoor", "Outdoor", "Any"
+  status           QueueEntryStatus @default(WAITING)
+  tokenNumber      String
+  positionSnapshot Int              // Position at creation time
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  @@index([restaurantId, status, createdAt])
+  @@index([restaurantId, createdAt])
+  @@index([tokenNumber])
+}
+
+

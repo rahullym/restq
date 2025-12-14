@@ -1,0 +1,19 @@
+services:
+  # Web Service (Next.js App)
+  - type: web
+    name: resq-web
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # IMPORTANT: Set this manually with your Supabase connection string
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: NEXTAUTH_URL
+        sync: false  # IMPORTANT: Set this manually in Render dashboard after deployment
+      - key: NOTIFICATION_PROVIDER
+        value: mock
