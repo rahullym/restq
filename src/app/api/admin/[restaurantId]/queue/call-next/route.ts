@@ -1,48 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { getNextInQueue } from '@/lib/queue-logic'
 import { sendQueueCalledNotification } from '@/lib/notifications'
-import { QueueEntryStatus } from '@prisma/client'
-import { ApiResponse, QueueEntryResponse } from '@/types'
-import { getPositionInQueue, calculateWaitTime } from '@/lib/queue-logic'
+import { ApiResponse } from '@/shared/types/api'
+import { logCallNext, incrementMetric } from '@/lib/logger'
+import { handleError } from '@/presentation/middleware/error-handler'
+import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { callNextCustomerUseCase, restaurantRepo, getQueuePositionUseCase } from '@/infrastructure/di/container'
+import { WaitTimeCalculator } from '@/domain/services/wait-time-calculator'
 
+/**
+ * Call Next Customer API
+ * Refactored to use clean architecture
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ restaurantId: string }> }
 ) {
+  const startTime = Date.now()
+
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: 'Unauthorized',
-        },
-        { status: 401 }
-      )
-    }
-
     const { restaurantId } = await params
 
-    // Verify user has access to this restaurant
-    if (!session.user.restaurantIds.includes(restaurantId)) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: 'Forbidden',
-        },
-        { status: 403 }
-      )
-    }
+    // Authentication and authorization
+    const session = await requireRestaurantAccess(restaurantId)
 
     // Get restaurant
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    })
-
+    const restaurant = await restaurantRepo.findById(restaurantId)
     if (!restaurant) {
       return NextResponse.json<ApiResponse>(
         {
@@ -53,90 +35,82 @@ export async function POST(
       )
     }
 
-    // Use transaction to prevent race conditions
-    const result = await prisma.$transaction(async (tx) => {
-      // Find the next waiting entry
-      const nextEntry = await tx.queueEntry.findFirst({
-        where: {
-          restaurantId,
-          status: QueueEntryStatus.WAITING,
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      })
+    // Execute use case
+    const result = await callNextCustomerUseCase.execute(restaurantId)
 
-      if (!nextEntry) {
-        return null
+    if (!result.success) {
+      if (result.error.message === 'No customers waiting in queue') {
+        return NextResponse.json<ApiResponse>(
+          {
+            success: false,
+            error: result.error.message,
+          },
+          { status: 404 }
+        )
       }
-
-      // Update status to CALLED
-      const updatedEntry = await tx.queueEntry.update({
-        where: { id: nextEntry.id },
-        data: {
-          status: QueueEntryStatus.CALLED,
-        },
-      })
-
-      return updatedEntry
-    })
-
-    if (!result) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: 'No customers waiting in queue',
-        },
-        { status: 404 }
-      )
+      return handleError(result.error, { restaurantId })
     }
 
-    // Send notification (optional, can be toggled in settings)
+    const entry = result.data
+
+    // Send notification (non-blocking)
     try {
       await sendQueueCalledNotification(
-        result.mobileNumber,
-        result.tokenNumber,
+        entry.mobileNumber,
+        entry.tokenNumber,
         restaurant.name
       )
     } catch (notificationError) {
-      console.error('Failed to send notification:', notificationError)
-      // Don't fail the request if notification fails
+      // Log but don't fail request
+      handleError(notificationError, {
+        restaurantId,
+        entryId: entry.id,
+        tokenNumber: entry.tokenNumber,
+      })
     }
 
-    // Get position and wait time for response
-    const position = await getPositionInQueue(result.id, restaurantId)
-    const waitTime = calculateWaitTime(
+    // Get position and wait time
+    const positionResult = await getQueuePositionUseCase.execute(
+      entry.id,
+      restaurantId
+    )
+    const position = positionResult.success ? positionResult.data.position : 0
+
+    const waitTime = WaitTimeCalculator.calculate(
       Math.max(0, position - 1),
       restaurant.averageMinutesPerParty
     )
 
-    const response: QueueEntryResponse = {
-      id: result.id,
-      tokenNumber: result.tokenNumber,
-      name: result.name,
-      mobileNumber: result.mobileNumber,
-      partySize: result.partySize,
-      seatingType: result.seatingType,
-      status: result.status,
-      position,
-      estimatedWaitMinutes: waitTime.minutes,
-      createdAt: result.createdAt.toISOString(),
-    }
+    const duration = Date.now() - startTime
 
-    return NextResponse.json<ApiResponse<QueueEntryResponse>>({
+    // Log successful call
+    logCallNext({
+      restaurantId,
+      entryId: entry.id,
+      tokenNumber: entry.tokenNumber,
+      userId: session.user.id,
+      duration,
+    })
+
+    incrementMetric('callNexts')
+
+    return NextResponse.json<ApiResponse>({
       success: true,
-      data: response,
-      message: `Called customer ${result.tokenNumber}`,
+      data: {
+        id: entry.id,
+        tokenNumber: entry.tokenNumber,
+        name: entry.name,
+        mobileNumber: entry.mobileNumber,
+        partySize: entry.partySize,
+        seatingType: entry.seatingType,
+        status: entry.status,
+        position,
+        estimatedWaitMinutes: waitTime.minutes,
+        createdAt: entry.createdAt.toISOString(),
+      },
+      message: `Called customer ${entry.tokenNumber}`,
     })
   } catch (error) {
-    console.error('Error calling next customer:', error)
-    return NextResponse.json<ApiResponse>(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    )
+    return handleError(error, { duration: Date.now() - startTime })
   }
 }
-

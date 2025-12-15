@@ -272,6 +272,7 @@ npm run test:watch
 - **Easy Setup**: Simple dashboard and connection strings
 - **Better Performance**: Optimized PostgreSQL
 - See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed setup guide
+- **Migrating existing database?** See [MIGRATE_TO_SUPABASE.md](./MIGRATE_TO_SUPABASE.md) or [QUICK_MIGRATION_GUIDE.md](./QUICK_MIGRATION_GUIDE.md)
 
 #### Option 2: Neon (Alternative)
 1. Create account at [neon.tech](https://neon.tech)

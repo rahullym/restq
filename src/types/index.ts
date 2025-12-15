@@ -2,33 +2,14 @@ import { QueueEntryStatus, UserRole } from '@prisma/client'
 
 export { QueueEntryStatus, UserRole }
 
-export interface ApiResponse<T = unknown> {
-  success: boolean
-  data?: T
-  error?: string
-  message?: string
-}
-
-export interface QueueEntryResponse {
-  id: string
-  tokenNumber: string
-  name: string
-  mobileNumber: string
-  partySize: number
-  seatingType?: string | null
-  status: QueueEntryStatus
-  position: number
-  estimatedWaitMinutes: number
-  createdAt: string
-}
-
-export interface QueueStatusResponse {
-  tokenNumber: string
-  position: number
-  estimatedWaitMinutes: number
-  status: QueueEntryStatus
-  message: string
-}
+// Re-export shared types for backward compatibility
+export type { ApiResponse } from '@/shared/types/api'
+export type {
+  QueueEntryResponse,
+  QueueStatusResponse,
+  QueueFormData,
+  UpdateStatusRequest,
+} from '@/shared/types/queue-entry'
 
 export interface RestaurantInfo {
   id: string
@@ -36,17 +17,6 @@ export interface RestaurantInfo {
   slug: string
   currentQueueCount: number
   estimatedWaitRange: string
-}
-
-export interface QueueFormData {
-  name: string
-  mobileNumber: string
-  partySize?: number
-  seatingType?: 'Indoor' | 'Outdoor' | 'Any'
-}
-
-export interface UpdateStatusRequest {
-  status: QueueEntryStatus
 }
 
 export interface AnalyticsData {
@@ -64,5 +34,3 @@ export interface UserSession {
   role: UserRole
   restaurantIds: string[]
 }
-
-

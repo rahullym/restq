@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateTokenNumber, getPositionInQueue, calculateWaitTime } from '@/lib/queue-logic'
-import { QueueEntryStatus } from '@prisma/client'
-import { z } from 'zod'
-import { ApiResponse, QueueEntryResponse } from '@/types'
+import { queueEntrySchema } from '@/shared/validation/schemas'
+import { ApiResponse } from '@/shared/types/api'
+import { checkQueueCreationRateLimit } from '@/lib/rate-limit'
+import { logQueueCreation, incrementMetric } from '@/lib/logger'
+import { handleError } from '@/presentation/middleware/error-handler'
+import { createQueueEntryUseCase, restaurantRepo } from '@/infrastructure/di/container'
+import { WaitTimeCalculator } from '@/domain/services/wait-time-calculator'
+import { getQueuePositionUseCase } from '@/infrastructure/di/container'
 
-const queueEntrySchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  mobileNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid mobile number'),
-  partySize: z.number().int().min(1).max(20).optional().default(2),
-  seatingType: z.enum(['Indoor', 'Outdoor', 'Any']).optional(),
-})
-
+/**
+ * Create Queue Entry API
+ * Refactored to use clean architecture layers
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ restaurantSlug: string }> }
 ) {
+  const startTime = Date.now()
+
   try {
     const { restaurantSlug } = await params
 
     // Find restaurant by slug
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { slug: restaurantSlug },
-    })
-
+    const restaurant = await restaurantRepo.findBySlug(restaurantSlug)
     if (!restaurant) {
       return NextResponse.json<ApiResponse>(
         {
@@ -38,78 +38,75 @@ export async function POST(
     const body = await request.json()
     const validatedData = queueEntrySchema.parse(body)
 
-    // Generate token number
-    const tokenNumber = await generateTokenNumber(restaurant.id)
+    // Rate limiting check
+    const rateLimitResult = await checkQueueCreationRateLimit(
+      request,
+      validatedData.mobileNumber,
+      restaurant.id
+    )
 
-    // Count waiting entries before this one to get position
-    const waitingCount = await prisma.queueEntry.count({
-      where: {
-        restaurantId: restaurant.id,
-        status: QueueEntryStatus.WAITING,
-      },
-    })
+    if (!rateLimitResult.allowed) {
+      incrementMetric('rateLimitHits')
+      return rateLimitResult.response!
+    }
 
-    const positionSnapshot = waitingCount + 1
+    // Execute use case
+    const result = await createQueueEntryUseCase.execute(
+      restaurant.id,
+      validatedData
+    )
 
-    // Create queue entry
-    const queueEntry = await prisma.queueEntry.create({
-      data: {
-        restaurantId: restaurant.id,
-        name: validatedData.name,
-        mobileNumber: validatedData.mobileNumber,
-        partySize: validatedData.partySize,
-        seatingType: validatedData.seatingType || null,
-        status: QueueEntryStatus.WAITING,
-        tokenNumber,
-        positionSnapshot,
-      },
-    })
+    if (!result.success) {
+      return handleError(result.error, { restaurantId: restaurant.id })
+    }
+
+    // Get current position (may have changed)
+    const positionResult = await getQueuePositionUseCase.execute(
+      result.data.entry.id,
+      restaurant.id
+    )
+
+    const position = positionResult.success ? positionResult.data.position : result.data.position
 
     // Calculate wait time
-    const waitTime = calculateWaitTime(
-      waitingCount,
+    const waitTime = WaitTimeCalculator.calculate(
+      Math.max(0, position - 1),
       restaurant.averageMinutesPerParty
     )
 
-    const response: QueueEntryResponse = {
-      id: queueEntry.id,
-      tokenNumber: queueEntry.tokenNumber,
-      name: queueEntry.name,
-      mobileNumber: queueEntry.mobileNumber,
-      partySize: queueEntry.partySize,
-      seatingType: queueEntry.seatingType,
-      status: queueEntry.status,
-      position: positionSnapshot,
-      estimatedWaitMinutes: waitTime.minutes,
-      createdAt: queueEntry.createdAt.toISOString(),
-    }
+    const duration = Date.now() - startTime
 
-    return NextResponse.json<ApiResponse<QueueEntryResponse>>(
+    // Log successful creation
+    logQueueCreation({
+      restaurantId: restaurant.id,
+      entryId: result.data.entry.id,
+      tokenNumber: result.data.entry.tokenNumber,
+      mobileNumber: validatedData.mobileNumber,
+      position,
+      duration,
+    })
+
+    incrementMetric('queueJoins')
+
+    return NextResponse.json<ApiResponse>(
       {
         success: true,
-        data: response,
+        data: {
+          id: result.data.entry.id,
+          tokenNumber: result.data.entry.tokenNumber,
+          name: result.data.entry.name,
+          mobileNumber: result.data.entry.mobileNumber,
+          partySize: result.data.entry.partySize,
+          seatingType: result.data.entry.seatingType,
+          status: result.data.entry.status,
+          position,
+          estimatedWaitMinutes: waitTime.minutes,
+          createdAt: result.data.entry.createdAt.toISOString(),
+        },
       },
       { status: 201 }
     )
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: error.errors[0].message,
-        },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error creating queue entry:', error)
-    return NextResponse.json<ApiResponse>(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    )
+    return handleError(error, { duration: Date.now() - startTime })
   }
 }
-

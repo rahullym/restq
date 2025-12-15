@@ -23,38 +23,39 @@ enum UserRole {
 }
 
 model Restaurant {
-  id                    String       @id @default(cuid())
-  name                  String
-  slug                  String       @unique
-  averageMinutesPerParty Int         @default(10)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
-  
-  queueEntries          QueueEntry[]
-  users                 UserRestaurant[]
+  id                     String   @id @default(cuid())
+  name                   String
+  slug                   String   @unique
+  averageMinutesPerParty Int      @default(10)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  queueEntries  QueueEntry[]
+  users         UserRestaurant[]
+  tokenSequence TokenSequence?
 }
 
 model User {
-  id           String            @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
-  email        String            @unique
+  email        String   @unique
   passwordHash String
-  role         UserRole          @default(ADMIN)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  
-  restaurants  UserRestaurant[]
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurants UserRestaurant[]
 }
 
 model UserRestaurant {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   userId       String
   restaurantId String
-  createdAt    DateTime   @default(now())
-  
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@unique([userId, restaurantId])
   @@index([userId])
   @@index([restaurantId])
@@ -66,18 +67,49 @@ model QueueEntry {
   name             String
   mobileNumber     String
   partySize        Int              @default(2)
-  seatingType      String?          // "Indoor", "Outdoor", "Any"
+  seatingType      String? // "Indoor", "Outdoor", "Any"
   status           QueueEntryStatus @default(WAITING)
   tokenNumber      String
-  positionSnapshot Int              // Position at creation time
+  positionSnapshot Int // Position at creation time
+  idempotencyKey   String?          @unique // For preventing duplicate submissions
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-  
-  restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   @@index([restaurantId, status, createdAt])
   @@index([restaurantId, createdAt])
   @@index([tokenNumber])
+  @@index([idempotencyKey])
+  @@index([restaurantId, mobileNumber, createdAt])
 }
 
+// Per-restaurant token sequence counter
+// Uses database sequence for atomic token generation
+model TokenSequence {
+  id           String   @id @default(cuid())
+  restaurantId String   @unique
+  currentValue BigInt   @default(0) // Current sequence value
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+// Rate limiting tracking per mobile number and IP
+model RateLimitEntry {
+  id           String   @id @default(cuid())
+  identifier   String // mobileNumber or IP address
+  type         String // "mobile" or "ip"
+  restaurantId String? // Optional: per-restaurant rate limits
+  count        Int      @default(1)
+  windowStart  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([identifier, type, windowStart])
+  @@index([restaurantId, identifier, type, windowStart])
+  @@index([windowStart]) // For cleanup of expired entries
+}

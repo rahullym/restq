@@ -1,79 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-import { ApiResponse } from '@/types'
+import { settingsSchema } from '@/shared/validation/schemas'
+import { ApiResponse } from '@/shared/types/api'
+import { handleError } from '@/presentation/middleware/error-handler'
+import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { restaurantRepo } from '@/infrastructure/di/container'
 
-const settingsSchema = z.object({
-  averageMinutesPerParty: z.number().int().min(1).max(60),
-})
-
+/**
+ * Update Restaurant Settings API
+ * Refactored to use clean architecture
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ restaurantId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: 'Unauthorized',
-        },
-        { status: 401 }
-      )
-    }
-
     const { restaurantId } = await params
 
-    // Verify user has access to this restaurant
-    if (!session.user.restaurantIds.includes(restaurantId)) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: 'Forbidden',
-        },
-        { status: 403 }
-      )
-    }
+    // Authentication and authorization
+    await requireRestaurantAccess(restaurantId)
 
     // Parse and validate request body
     const body = await request.json()
     const { averageMinutesPerParty } = settingsSchema.parse(body)
 
-    // Update restaurant settings
-    await prisma.restaurant.update({
-      where: { id: restaurantId },
-      data: {
-        averageMinutesPerParty,
-      },
-    })
+    // Get restaurant
+    const restaurant = await restaurantRepo.findById(restaurantId)
+    if (!restaurant) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: 'Restaurant not found',
+        },
+        { status: 404 }
+      )
+    }
+
+    // Update settings using domain entity
+    restaurant.averageMinutesPerParty = averageMinutesPerParty
+
+    // Persist changes
+    const result = await restaurantRepo.update(restaurant)
+    if (!result.success) {
+      return handleError(result.error, { restaurantId })
+    }
 
     return NextResponse.json<ApiResponse>({
       success: true,
       message: 'Settings updated successfully',
     })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json<ApiResponse>(
-        {
-          success: false,
-          error: error.errors[0].message,
-        },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error updating settings:', error)
-    return NextResponse.json<ApiResponse>(
-      {
-        success: false,
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    )
+    return handleError(error)
   }
 }
-
