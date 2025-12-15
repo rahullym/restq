@@ -6,8 +6,8 @@ frontend:
         # Install dependencies - npm install handles platform-specific optional dependencies automatically
         - echo "Installing dependencies..."
         - npm install --no-audit --no-fund
-        # Ensure lightningcss Linux binary is available (required for Tailwind CSS v4 on Linux)
-        - echo "Verifying lightningcss platform binaries..."
+        # Ensure lightningcss and tailwindcss oxide Linux binaries are available (Tailwind CSS v4 on Linux)
+        - echo "Verifying lightningcss and tailwindcss oxide platform binaries..."
         - |
           if [ ! -f "node_modules/lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node" ]; then
             echo "Installing lightningcss Linux binary..."
@@ -15,9 +15,15 @@ frontend:
           else
             echo "lightningcss Linux binary found"
           fi
+          if [ ! -f "node_modules/@tailwindcss/oxide-linux-x64-gnu/tailwindcss-oxide.linux-x64-gnu.node" ]; then
+            echo "Installing tailwindcss oxide Linux binary..."
+            npm install --no-save @tailwindcss/oxide-linux-x64-gnu@4.1.18 || echo "Binary installation attempted"
+          else
+            echo "tailwindcss oxide Linux binary found"
+          fi
         # Generate Prisma Client (does not require DATABASE_URL, only schema)
         - echo "Generating Prisma Client..."
-        - npx prisma generate --schema=./prisma/schema.prisma || (echo "Prisma generate failed, but continuing..." && exit 0)
+        - npx prisma generate --schema=./prisma/schema.prisma
     build:
       commands:
         # Run database migrations only if migrations directory exists and has files
