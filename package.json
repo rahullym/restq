@@ -16,7 +16,6 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "migrate:to-supabase": "tsx scripts/migrate-to-supabase.ts",
     "test": "jest",
     "test:watch": "jest --watch"
   },
