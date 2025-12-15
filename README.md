@@ -237,24 +237,24 @@ npm run test:watch
 
 ## Deployment
 
-### Render Deployment (Free Tier) - Recommended
+### AWS Amplify Deployment - Recommended
 
-**Quick Start**: See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed instructions.
+**Quick Start**: See [AMPLIFY_DEPLOYMENT.md](./AMPLIFY_DEPLOYMENT.md) for detailed instructions.
 
 **Summary**:
 1. Push code to GitHub
 2. **Set up Supabase database** (see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md))
-3. Create Web Service on Render (free tier)
+3. Create app in AWS Amplify Console
 4. Set environment variables:
    - `DATABASE_URL` (use Supabase Direct connection string - port 5432)
    - `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
-   - `NEXTAUTH_URL` (your Render app URL)
+   - `NEXTAUTH_URL` (your Amplify app URL)
 5. Run migrations: `npx prisma migrate deploy`
 6. Seed database: `npm run db:seed`
 
-**Render Configuration**: The project includes `render.yaml` for automatic setup.
+**Amplify Configuration**: The project includes `amplify.yml` for automatic setup.
 
-**Database**: We use **Supabase** instead of Render's PostgreSQL for better free tier limits (500 MB vs 1 GB, better performance).
+**Database**: We use **Supabase** for managed PostgreSQL (500 MB free tier, better performance).
 
 ### Vercel Deployment
 

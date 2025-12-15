@@ -58,7 +58,7 @@ export default function Error({
               <li>Check that DATABASE_URL is set correctly in your environment variables</li>
               <li>Verify your database is running and accessible</li>
               <li>Ensure your database connection string uses the correct port (5432 for direct connection)</li>
-              <li>Check Render logs for detailed error information</li>
+              <li>Check your deployment platform logs for detailed error information</li>
             </ul>
           </div>
         )}

@@ -64,10 +64,6 @@ NEXTAUTH_SECRET="aBc123XyZ789Def456Ghi012Jkl345Mno678Pqr901Stu234Vwx567"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-**For Production (Render)**:
-```env
-NEXTAUTH_URL="https://your-app-name.onrender.com"
-```
 
 **For Production (AWS Amplify)**:
 ```env
@@ -145,22 +141,6 @@ NODE_ENV="development"
 NOTIFICATION_PROVIDER="mock"
 ```
 
-### For Production (Render)
-```env
-# Database (Supabase)
-DATABASE_URL="postgresql://postgres:YourPassword123@db.xxxxx.supabase.co:5432/postgres?sslmode=require"
-
-# NextAuth
-NEXTAUTH_SECRET="your-production-secret-key-different-from-dev"
-NEXTAUTH_URL="https://your-app-name.onrender.com"
-
-# Environment
-NODE_ENV="production"
-
-# Optional
-NOTIFICATION_PROVIDER="mock"
-```
-
 ### For Production (AWS Amplify)
 ```env
 # Database (Supabase)
@@ -208,16 +188,6 @@ touch .env
 ```
 
 Then add all variables to `.env` file.
-
-### Render (Production)
-1. Go to Render Dashboard
-2. Select your Web Service
-3. Go to **Environment** tab
-4. Click **"Add Environment Variable"**
-5. Add each variable:
-   - Key: `DATABASE_URL`
-   - Value: Your Supabase connection string
-   - Repeat for all required variables
 
 ### Vercel (Alternative)
 1. Go to Vercel Dashboard
@@ -298,4 +268,4 @@ After setting environment variables:
 - [ ] `NEXTAUTH_URL` - Your app URL (matches actual URL)
 - [ ] `NODE_ENV` - Set to `development` or `production`
 - [ ] `.env` file is in `.gitignore` (not committed)
-- [ ] Production variables set in Render/Vercel/Amplify dashboard
+- [ ] Production variables set in Vercel/Amplify dashboard

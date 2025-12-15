@@ -77,9 +77,9 @@ DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/po
 
 **Important**: Replace `[YOUR-PASSWORD]` with your actual Supabase password.
 
-### For Production (Render)
+### For Production (AWS Amplify or Vercel)
 
-1. Go to Render Dashboard → Your Web Service → **Environment**
+1. Go to your deployment platform's environment variables settings
 2. Update `DATABASE_URL` with your Supabase connection string
 3. Use **Direct connection** (port 5432) for Prisma
 
@@ -145,7 +145,7 @@ npm run db:seed
 
 ## Step 8: Update Production Environment
 
-1. **Render**: Update `DATABASE_URL` in environment variables
+1. **AWS Amplify**: Update `DATABASE_URL` in App settings → Environment variables
 2. **Vercel**: Update `DATABASE_URL` in project settings
 3. Redeploy your application
 
@@ -154,7 +154,7 @@ npm run db:seed
 After deployment, run migrations:
 
 ```bash
-# In Render Shell or production environment
+# In your deployment platform's shell or production environment
 npx prisma migrate deploy
 ```
 
@@ -215,5 +215,5 @@ After successful migration:
 ## Additional Resources
 
 - [Supabase Setup Guide](./SUPABASE_SETUP.md)
-- [Render Deployment Guide](./RENDER_DEPLOYMENT.md)
+- [Amplify Deployment Guide](./AMPLIFY_DEPLOYMENT.md)
 - [Supabase Documentation](https://supabase.com/docs)

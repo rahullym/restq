@@ -22,7 +22,7 @@ This guide will help you set up a Supabase PostgreSQL database for your RESq app
 2. Fill in the details:
    - **Name**: `resq` (or any name you prefer)
    - **Database Password**: Create a strong password (save this!)
-   - **Region**: Choose closest to your Render deployment region
+   - **Region**: Choose closest to your deployment region
    - **Pricing Plan**: **Free** (or Pro if you need more)
 3. Click **"Create new project"**
 4. Wait 2-3 minutes for the project to be created
@@ -81,9 +81,9 @@ Update your `.env` file:
 DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres"
 ```
 
-### For Render Deployment
+### For Production Deployment (AWS Amplify or Vercel)
 
-1. Go to Render Dashboard → Your Web Service → Environment
+1. Go to your deployment platform's environment variables settings
 2. Add `DATABASE_URL` with your Supabase connection string
 3. Make sure to use the **direct connection** (port 5432) for Prisma
 
@@ -108,9 +108,9 @@ DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/po
 
 ## Step 7: Run Migrations on Supabase
 
-After deploying to Render:
+After deploying to your platform:
 
-1. Go to Render Dashboard → Your Web Service → **Shell**
+1. Go to your deployment platform's shell/console
 2. Run:
    ```bash
    npx prisma migrate deploy
@@ -182,7 +182,7 @@ postgresql://postgres:[PASSWORD]@db.xxxxx.supabase.co:5432/postgres?sslmode=requ
 
 - Use direct connection (port 5432) for migrations
 - Don't use `pgbouncer=true` for migrations
-- Run migrations from Render Shell, not locally
+- Run migrations from your deployment platform's shell, not locally
 
 ## Upgrading Supabase Plan
 
@@ -205,8 +205,8 @@ If you need more resources:
 
 After setting up Supabase:
 
-1. Update Render environment variables with Supabase connection string
-2. Deploy your application to Render
+1. Update your deployment platform's environment variables with Supabase connection string
+2. Deploy your application (see [AMPLIFY_DEPLOYMENT.md](./AMPLIFY_DEPLOYMENT.md) for Amplify or Vercel docs)
 3. Run migrations: `npx prisma migrate deploy`
 4. Seed database: `npm run db:seed`
 5. Test your application
