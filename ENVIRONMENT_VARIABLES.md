@@ -69,6 +69,11 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_URL="https://your-app-name.onrender.com"
 ```
 
+**For Production (AWS Amplify)**:
+```env
+NEXTAUTH_URL="https://main.d1234567890.amplifyapp.com"
+```
+
 **Important**: 
 - Must match your actual application URL exactly
 - Include `http://` or `https://`
@@ -156,6 +161,22 @@ NODE_ENV="production"
 NOTIFICATION_PROVIDER="mock"
 ```
 
+### For Production (AWS Amplify)
+```env
+# Database (Supabase)
+DATABASE_URL="postgresql://postgres:YourPassword123@db.xxxxx.supabase.co:5432/postgres?sslmode=require"
+
+# NextAuth
+NEXTAUTH_SECRET="your-production-secret-key-different-from-dev"
+NEXTAUTH_URL="https://main.d1234567890.amplifyapp.com"
+
+# Environment
+NODE_ENV="production"
+
+# Optional
+NOTIFICATION_PROVIDER="mock"
+```
+
 ### For Migration (Temporary)
 ```env
 # Old Database (temporary - remove after migration)
@@ -203,6 +224,18 @@ Then add all variables to `.env` file.
 2. Select your project
 3. Go to **Settings** → **Environment Variables**
 4. Add each variable for Production, Preview, and Development environments
+
+### AWS Amplify
+1. Go to AWS Amplify Console
+2. Select your app
+3. Go to **App settings** → **Environment variables**
+4. Click **"Manage variables"**
+5. Add each variable:
+   - Key: `DATABASE_URL`
+   - Value: Your Supabase connection string (with `?sslmode=require`)
+   - Repeat for all required variables
+6. You can set different variables for different branches
+7. After first deployment, update `NEXTAUTH_URL` to match your Amplify app URL
 
 ---
 
@@ -265,4 +298,4 @@ After setting environment variables:
 - [ ] `NEXTAUTH_URL` - Your app URL (matches actual URL)
 - [ ] `NODE_ENV` - Set to `development` or `production`
 - [ ] `.env` file is in `.gitignore` (not committed)
-- [ ] Production variables set in Render/Vercel dashboard
+- [ ] Production variables set in Render/Vercel/Amplify dashboard

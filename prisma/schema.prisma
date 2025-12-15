@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,51 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum QueueEntryStatus {
-  WAITING
-  CALLED
-  SEATED
-  NO_SHOW
-  CANCELLED
-}
-
-enum UserRole {
-  ADMIN
-}
-
 model Restaurant {
-  id                     String   @id @default(cuid())
+  id                     String           @id @default(cuid())
   name                   String
-  slug                   String   @unique
-  averageMinutesPerParty Int      @default(10)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-
-  queueEntries  QueueEntry[]
-  users         UserRestaurant[]
-  tokenSequence TokenSequence?
+  slug                   String           @unique
+  averageMinutesPerParty Int              @default(10)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  queueEntries           QueueEntry[]
+  tokenSequence          TokenSequence?
+  users                  UserRestaurant[]
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String           @id @default(cuid())
   name         String
-  email        String   @unique
+  email        String           @unique
   passwordHash String
-  role         UserRole @default(ADMIN)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  restaurants UserRestaurant[]
+  role         UserRole         @default(ADMIN)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  restaurants  UserRestaurant[]
 }
 
 model UserRestaurant {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   userId       String
   restaurantId String
-  createdAt    DateTime @default(now())
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, restaurantId])
   @@index([userId])
@@ -67,15 +49,14 @@ model QueueEntry {
   name             String
   mobileNumber     String
   partySize        Int              @default(2)
-  seatingType      String? // "Indoor", "Outdoor", "Any"
+  seatingType      String?
   status           QueueEntryStatus @default(WAITING)
   tokenNumber      String
-  positionSnapshot Int // Position at creation time
-  idempotencyKey   String?          @unique // For preventing duplicate submissions
+  positionSnapshot Int
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  idempotencyKey   String?          @unique
+  restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId, status, createdAt])
   @@index([restaurantId, createdAt])
@@ -84,26 +65,22 @@ model QueueEntry {
   @@index([restaurantId, mobileNumber, createdAt])
 }
 
-// Per-restaurant token sequence counter
-// Uses database sequence for atomic token generation
 model TokenSequence {
-  id           String   @id @default(cuid())
-  restaurantId String   @unique
-  currentValue BigInt   @default(0) // Current sequence value
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  restaurantId String     @unique
+  currentValue BigInt     @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
 
-// Rate limiting tracking per mobile number and IP
 model RateLimitEntry {
   id           String   @id @default(cuid())
-  identifier   String // mobileNumber or IP address
-  type         String // "mobile" or "ip"
-  restaurantId String? // Optional: per-restaurant rate limits
+  identifier   String
+  type         String
+  restaurantId String?
   count        Int      @default(1)
   windowStart  DateTime @default(now())
   createdAt    DateTime @default(now())
@@ -111,5 +88,17 @@ model RateLimitEntry {
 
   @@index([identifier, type, windowStart])
   @@index([restaurantId, identifier, type, windowStart])
-  @@index([windowStart]) // For cleanup of expired entries
+  @@index([windowStart])
+}
+
+enum QueueEntryStatus {
+  WAITING
+  CALLED
+  SEATED
+  NO_SHOW
+  CANCELLED
+}
+
+enum UserRole {
+  ADMIN
 }

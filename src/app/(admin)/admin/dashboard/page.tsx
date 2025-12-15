@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getPositionInQueue, calculateWaitTime } from '@/lib/queue-logic'
 import QueueDashboard from '@/components/admin/QueueDashboard'
 import { QueueEntryResponse } from '@/types'
+import { QueueEntry } from '@prisma/client'
 
 export default async function AdminDashboardPage() {
   try {
@@ -50,8 +51,8 @@ export default async function AdminDashboardPage() {
       )
     }
 
-    // Get all queue entries
-    let queueEntries
+    // Get initial queue entries for SSR
+    let queueEntries: QueueEntry[]
     try {
       queueEntries = await prisma.queueEntry.findMany({
         where: {
@@ -60,6 +61,7 @@ export default async function AdminDashboardPage() {
         orderBy: {
           createdAt: 'asc',
         },
+        take: 50, // Limit initial load
       })
     } catch (dbError: any) {
       console.error('Database error loading queue entries:', {
@@ -67,11 +69,10 @@ export default async function AdminDashboardPage() {
         code: dbError?.code,
         restaurantId,
       })
-      // Return empty array if queue entries fail to load
       queueEntries = []
     }
 
-    // Enrich with position and wait time
+    // Enrich with position and wait time for initial render
     let enrichedEntries: QueueEntryResponse[] = []
     try {
       enrichedEntries = await Promise.all(
@@ -100,7 +101,6 @@ export default async function AdminDashboardPage() {
               entryId: entry.id,
               error: entryError?.message || entryError,
             })
-            // Return entry with default values if enrichment fails
             return {
               id: entry.id,
               tokenNumber: entry.tokenNumber,
@@ -120,7 +120,6 @@ export default async function AdminDashboardPage() {
       console.error('Error enriching queue entries:', {
         error: enrichError?.message || enrichError,
       })
-      // Use basic entries without enrichment
       enrichedEntries = queueEntries.map((entry) => ({
         id: entry.id,
         tokenNumber: entry.tokenNumber,
@@ -142,7 +141,7 @@ export default async function AdminDashboardPage() {
           <p className="mt-2 text-gray-600">Manage your restaurant queue</p>
         </div>
 
-        <QueueDashboard entries={enrichedEntries} restaurantId={restaurantId} />
+        <QueueDashboard initialEntries={enrichedEntries} restaurantId={restaurantId} />
       </div>
     )
   } catch (error: any) {

@@ -76,8 +76,10 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/admin/login',
+    error: '/api/auth/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 }
 
 declare module 'next-auth' {

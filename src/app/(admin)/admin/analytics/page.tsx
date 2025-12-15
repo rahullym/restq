@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { QueueEntryStatus } from '@prisma/client'
+import { QueueEntryStatus, QueueEntry } from '@prisma/client'
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard'
 
 export default async function AnalyticsPage() {
@@ -54,7 +54,7 @@ export default async function AnalyticsPage() {
     tomorrow.setDate(tomorrow.getDate() + 1)
 
     // Get all entries for today
-    let todayEntries
+    let todayEntries: QueueEntry[]
     try {
       todayEntries = await prisma.queueEntry.findMany({
         where: {
