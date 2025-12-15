@@ -27,5 +27,3 @@ frontend:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
-      - .next/standalone/**/*
-      - .next/static/**/*

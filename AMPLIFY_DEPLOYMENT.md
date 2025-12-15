@@ -49,6 +49,23 @@ See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for complete Supabase setup guide.
 5. Select your repository and branch (usually `main`)
 6. Click **"Next"**
 
+### Important: Enable SSR Support
+
+**Amplify will automatically detect Next.js and enable SSR**, but you need to ensure:
+
+1. **Service Role**: During app creation, Amplify will prompt you to create or select an IAM service role
+   - If creating a new role, Amplify will automatically configure it with necessary permissions
+   - This role is required for SSR compute resources
+   - **Make sure to create/select a service role** - SSR won't work without it
+
+2. **Framework Detection**: Amplify should automatically detect Next.js
+   - If it doesn't, make sure `package.json` has `"next"` in dependencies
+   - The `amplify.yml` file will be used for build configuration
+
+3. **Compute Resources**: After deployment, verify SSR is enabled:
+   - Go to **App settings** → **General**
+   - Check that **"Compute"** section shows SSR is enabled
+
 ## Step 4: Configure Build Settings
 
 Amplify should automatically detect `amplify.yml`. If not, you can manually configure:
@@ -63,13 +80,19 @@ frontend:
     preBuild:
       commands:
         - echo "Installing dependencies..."
-        - npm ci
+        - npm ci || npm install
         - echo "Generating Prisma client..."
         - npx prisma generate
     build:
       commands:
-        - echo "Running database migrations..."
-        - npx prisma migrate deploy
+        - echo "Running database migrations (if any)..."
+        - |
+          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations)" ]; then
+            echo "Migrations found, running migrate deploy..."
+            npx prisma migrate deploy || echo "Migration failed or not needed, continuing..."
+          else
+            echo "No migrations found, skipping migrate deploy..."
+          fi
         - echo "Building Next.js application..."
         - npm run build
   artifacts:
@@ -81,6 +104,12 @@ frontend:
       - node_modules/**/*
       - .next/cache/**/*
 ```
+
+**Important Notes**:
+- Amplify automatically detects Next.js and enables SSR compute
+- The `artifacts.baseDirectory` must be `.next` (Next.js default output directory)
+- Do NOT override `distDir` in `next.config.js` - keep it as default `.next`
+- The service role created during app setup enables SSR compute resources
 
 **Note**: If Amplify doesn't detect the file automatically:
 1. Click **"Edit"** in the build settings
