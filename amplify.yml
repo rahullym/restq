@@ -3,8 +3,10 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Installing dependencies..."
-        - npm ci || npm install
+        - echo "Installing dependencies (including optional for platform binaries)..."
+        - npm install
+        - echo "Installing lightningcss Linux binary for build environment..."
+        - npm install --no-save lightningcss-linux-x64-gnu@1.30.2 || echo "Linux binary installation attempted, continuing..."
         - echo "Generating Prisma client..."
         - npx prisma generate
     build:
