@@ -3,24 +3,36 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Install dependencies - npm install handles platform-specific optional dependencies automatically
-        - echo "Installing dependencies..."
-        - npm install --no-audit --no-fund
-        # Ensure lightningcss and tailwindcss oxide Linux binaries are available (Tailwind CSS v4 on Linux)
-        - echo "Verifying lightningcss and tailwindcss oxide platform binaries..."
+        # Install dependencies with optional deps so platform binaries can be installed
+        - echo "Installing dependencies (including optional platform binaries)..."
+        - npm install --no-audit --no-fund --include=optional
+
+        # Ensure lightningcss platform binaries are present and linked correctly
+        - echo "Ensuring lightningcss platform binaries are installed..."
+        - npm rebuild lightningcss || npm install --force lightningcss@1.30.2
+        - echo "Verifying lightningcss Linux binary..."
         - |
           if [ ! -f "node_modules/lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node" ]; then
-            echo "Installing lightningcss Linux binary..."
-            npm install --no-save lightningcss-linux-x64-gnu@1.30.2 || echo "Binary installation attempted"
+            echo "lightningcss Linux binary not found, attempting manual install..."
+            npm install --save-optional lightningcss-linux-x64-gnu@1.30.2 || echo "Optional lightningcss-linux-x64-gnu install attempted"
+            npm rebuild lightningcss || echo "lightningcss rebuild attempted"
           else
             echo "lightningcss Linux binary found"
           fi
+
+        # Ensure tailwindcss oxide platform binaries are present
+        - echo "Ensuring tailwindcss oxide platform binaries are installed..."
+        - npm rebuild @tailwindcss/oxide || npm install --force @tailwindcss/oxide@4.1.18
+        - echo "Verifying tailwindcss oxide Linux binary..."
+        - |
           if [ ! -f "node_modules/@tailwindcss/oxide-linux-x64-gnu/tailwindcss-oxide.linux-x64-gnu.node" ]; then
-            echo "Installing tailwindcss oxide Linux binary..."
-            npm install --no-save @tailwindcss/oxide-linux-x64-gnu@4.1.18 || echo "Binary installation attempted"
+            echo "tailwindcss oxide Linux binary not found, attempting manual install..."
+            npm install --save-optional @tailwindcss/oxide-linux-x64-gnu@4.1.18 || echo "Optional @tailwindcss/oxide-linux-x64-gnu install attempted"
+            npm rebuild @tailwindcss/oxide || echo "tailwindcss oxide rebuild attempted"
           else
             echo "tailwindcss oxide Linux binary found"
           fi
+
         # Generate Prisma Client (does not require DATABASE_URL, only schema)
         - echo "Generating Prisma Client..."
         - npx prisma generate --schema=./prisma/schema.prisma

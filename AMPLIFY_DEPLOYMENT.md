@@ -251,6 +251,17 @@ This creates:
 - Optimize build by caching `node_modules` (already configured)
 - Consider upgrading if builds consistently timeout
 
+### SSR Not Working / API Routes Not Found
+
+- **Verify Service Role**: Go to **App settings** → **General** → Check **"Service role"** is set
+  - If missing, go to **App settings** → **General** → **Service role** → **Edit** → Create/select a role
+- **Check Compute Resources**: Go to **App settings** → **General** → Verify **"Compute"** shows SSR is enabled
+- **Verify Framework Detection**: Ensure Amplify detected Next.js (should show in build logs)
+- **Check Build Logs**: Look for "Detected framework: Next.js" in build output
+- **API Routes**: Ensure your API routes are in `src/app/api/` (App Router) or `pages/api/` (Pages Router)
+- **Environment Variables**: Ensure all required env vars are set, especially `DATABASE_URL` and `NEXTAUTH_SECRET`
+- **Next.js Version**: Amplify supports Next.js 12-15, verify your version is compatible
+
 ## AWS Amplify Free Tier
 
 - **5 GB storage** - Usually sufficient
