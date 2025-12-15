@@ -22,13 +22,13 @@ export default function Error({
     // Example: Sentry.captureException(error)
   }, [error])
 
-  const isDatabaseError = 
-    error.message?.toLowerCase().includes('database') ||
-    error.message?.toLowerCase().includes('prisma') ||
-    error.message?.toLowerCase().includes('connect') ||
-    error.message?.toLowerCase().includes('connection') ||
-    error.cause?.toString().includes('Prisma') ||
-    error.cause?.toString().includes('database')
+  const isDatabaseError: boolean = 
+    Boolean(error.message?.toLowerCase().includes('database')) ||
+    Boolean(error.message?.toLowerCase().includes('prisma')) ||
+    Boolean(error.message?.toLowerCase().includes('connect')) ||
+    Boolean(error.message?.toLowerCase().includes('connection')) ||
+    Boolean(error.cause && String(error.cause).includes('Prisma')) ||
+    Boolean(error.cause && String(error.cause).includes('database'))
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
