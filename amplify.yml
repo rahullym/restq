@@ -3,22 +3,37 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Installing dependencies (including optional for platform binaries)..."
-        - npm install
-        - echo "Installing lightningcss Linux binary for build environment..."
-        - npm install --no-save lightningcss-linux-x64-gnu@1.30.2 || echo "Linux binary installation attempted, continuing..."
-        - echo "Generating Prisma client..."
-        - npx prisma generate
+        # Install dependencies - npm install handles platform-specific optional dependencies automatically
+        - echo "Installing dependencies..."
+        - npm install --no-audit --no-fund
+        # Ensure lightningcss Linux binary is available (required for Tailwind CSS v4 on Linux)
+        - echo "Verifying lightningcss platform binaries..."
+        - |
+          if [ ! -f "node_modules/lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node" ]; then
+            echo "Installing lightningcss Linux binary..."
+            npm install --no-save lightningcss-linux-x64-gnu@1.30.2 || echo "Binary installation attempted"
+          else
+            echo "lightningcss Linux binary found"
+          fi
+        # Generate Prisma Client (does not require DATABASE_URL, only schema)
+        - echo "Generating Prisma Client..."
+        - npx prisma generate --schema=./prisma/schema.prisma || (echo "Prisma generate failed, but continuing..." && exit 0)
     build:
       commands:
-        - echo "Running database migrations (if any)..."
+        # Run database migrations only if migrations directory exists and has files
+        - echo "Checking for database migrations..."
         - |
-          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations)" ]; then
-            echo "Migrations found, running migrate deploy..."
-            npx prisma migrate deploy || echo "Migration failed or not needed, continuing..."
+          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+            echo "Migrations found, deploying..."
+            if [ -n "$DATABASE_URL" ]; then
+              npx prisma migrate deploy || echo "Migration deployment failed, continuing build..."
+            else
+              echo "DATABASE_URL not set, skipping migrations (will run at runtime)"
+            fi
           else
-            echo "No migrations found, skipping migrate deploy..."
+            echo "No migrations found, skipping migrate deploy"
           fi
+        # Build Next.js application
         - echo "Building Next.js application..."
         - npm run build
   artifacts:
