@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: resq
+    env: node
+    buildCommand: |
+      npm install --no-audit --no-fund --include=optional &&
+      npm rebuild lightningcss || npm install --force lightningcss@1.30.2 &&
+      npm install --save-optional lightningcss-linux-x64-gnu@1.30.2 || true &&
+      npm rebuild lightningcss || true &&
+      npm rebuild @tailwindcss/oxide || npm install --force @tailwindcss/oxide@4.1.18 &&
+      npm install --save-optional @tailwindcss/oxide-linux-x64-gnu@4.1.18 || true &&
+      npm rebuild @tailwindcss/oxide || true &&
+      npx prisma generate &&
+      npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
