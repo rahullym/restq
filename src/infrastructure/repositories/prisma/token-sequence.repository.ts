@@ -1,14 +1,14 @@
 /**
  * Prisma implementation of Token Sequence Repository
  */
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { ITokenSequenceRepository } from '../token-sequence.repository'
 import { Result } from '@/shared/types/result'
 
 export class PrismaTokenSequenceRepository implements ITokenSequenceRepository {
   constructor(private prisma: PrismaClient) {}
 
-  async getNextToken(restaurantId: string, tx?: any): Promise<Result<string>> {
+  async getNextToken(restaurantId: string, tx?: Prisma.TransactionClient): Promise<Result<string>> {
     const client = tx || this.prisma
 
     try {

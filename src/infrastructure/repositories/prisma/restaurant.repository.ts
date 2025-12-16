@@ -1,7 +1,7 @@
 /**
  * Prisma implementation of Restaurant Repository
  */
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Restaurant as PrismaRestaurant } from '@prisma/client'
 import { Restaurant } from '@/domain/entities/restaurant'
 import { IRestaurantRepository } from '../restaurant.repository'
 import { Result } from '@/shared/types/result'
@@ -9,7 +9,7 @@ import { Result } from '@/shared/types/result'
 export class PrismaRestaurantRepository implements IRestaurantRepository {
   constructor(private prisma: PrismaClient) {}
 
-  private toDomain(prismaRestaurant: any): Restaurant {
+  private toDomain(prismaRestaurant: PrismaRestaurant): Restaurant {
     return new Restaurant({
       id: prismaRestaurant.id,
       name: prismaRestaurant.name,

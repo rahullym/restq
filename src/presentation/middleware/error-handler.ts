@@ -17,7 +17,7 @@ export class AppError extends Error {
   }
 }
 
-export function handleError(error: unknown, context?: Record<string, any>) {
+export function handleError(error: unknown, context?: Record<string, unknown>) {
   // Log error
   logError('api.error', error instanceof Error ? error : new Error(String(error)), context)
 
@@ -32,12 +32,13 @@ export function handleError(error: unknown, context?: Record<string, any>) {
     )
   }
 
-  // Handle validation errors
+  // Handle validation errors (Zod)
   if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
+    const zodError = error as { errors?: Array<{ message?: string }> }
     return NextResponse.json<ApiResponse>(
       {
         success: false,
-        error: (error as any).errors[0]?.message || 'Validation error',
+        error: zodError.errors?.[0]?.message || 'Validation error',
       },
       { status: 400 }
     )

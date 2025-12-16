@@ -1,7 +1,7 @@
 /**
  * Prisma implementation of Queue Entry Repository
  */
-import { PrismaClient, QueueEntryStatus } from '@prisma/client'
+import { PrismaClient, QueueEntryStatus, QueueEntry as PrismaQueueEntry } from '@prisma/client'
 import { QueueEntry } from '@/domain/entities/queue-entry'
 import { IQueueEntryRepository } from '../queue-entry.repository'
 import { Result } from '@/shared/types/result'
@@ -9,7 +9,7 @@ import { Result } from '@/shared/types/result'
 export class PrismaQueueEntryRepository implements IQueueEntryRepository {
   constructor(private prisma: PrismaClient) {}
 
-  private toDomain(prismaEntry: any): QueueEntry {
+  private toDomain(prismaEntry: PrismaQueueEntry): QueueEntry {
     return new QueueEntry({
       id: prismaEntry.id,
       restaurantId: prismaEntry.restaurantId,

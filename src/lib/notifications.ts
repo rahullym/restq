@@ -11,6 +11,8 @@
  * - Push notifications
  */
 
+import { logEvent } from './logger'
+
 export interface NotificationService {
   sendQueueCalled(mobileNumber: string, message: string): Promise<boolean>
 }
@@ -21,10 +23,20 @@ export interface NotificationService {
  */
 class MockNotificationService implements NotificationService {
   async sendQueueCalled(mobileNumber: string, message: string): Promise<boolean> {
-    console.log('[MOCK NOTIFICATION]')
-    console.log(`To: ${mobileNumber}`)
-    console.log(`Message: ${message}`)
-    console.log('---')
+    // Use logger instead of console.log for consistency
+    logEvent('info', 'notification_sent', {
+      provider: 'mock',
+      mobileNumber,
+      messageLength: message.length,
+    })
+    
+    // In development, also log to console for visibility
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[MOCK NOTIFICATION]')
+      console.log(`To: ${mobileNumber}`)
+      console.log(`Message: ${message}`)
+      console.log('---')
+    }
     
     // Simulate async operation
     await new Promise(resolve => setTimeout(resolve, 100))

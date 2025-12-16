@@ -61,7 +61,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.restaurantIds = (user as any).restaurantIds || []
+        // Type assertion needed because NextAuth User type doesn't include restaurantIds
+        // but we add it in the authorize function return value
+        token.restaurantIds = ('restaurantIds' in user ? user.restaurantIds : []) as string[]
       }
       return token
     },

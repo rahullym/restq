@@ -42,7 +42,7 @@ interface LogEvent {
 /**
  * Logs a structured event
  */
-function logEvent(level: 'info' | 'warn' | 'error', event: string, context: LogContext, duration?: number, error?: Error) {
+export function logEvent(level: 'info' | 'warn' | 'error', event: string, context: LogContext, duration?: number, error?: Error) {
   const logEntry: LogEvent = {
     timestamp: new Date().toISOString(),
     level,
