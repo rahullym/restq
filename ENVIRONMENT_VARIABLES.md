@@ -127,8 +127,8 @@ OLD_DATABASE_URL="postgresql://user:password@old-host:5432/old-database"
 
 ### For Local Development
 ```env
-# Database (Supabase)
-DATABASE_URL="postgresql://postgres:YourPassword123@db.xxxxx.supabase.co:5432/postgres"
+# Database (Supabase) - Same database for local and production
+DATABASE_URL="postgresql://postgres:Hard4soft%4020225@db.yuiuvesktysmjiieakte.supabase.co:5432/postgres?sslmode=require"
 
 # NextAuth
 NEXTAUTH_SECRET="your-generated-secret-key-here-minimum-32-chars"
@@ -143,8 +143,8 @@ NOTIFICATION_PROVIDER="mock"
 
 ### For Production (AWS Amplify)
 ```env
-# Database (Supabase)
-DATABASE_URL="postgresql://postgres:YourPassword123@db.xxxxx.supabase.co:5432/postgres?sslmode=require"
+# Database (Supabase) - Same database as local development
+DATABASE_URL="postgresql://postgres:Hard4soft%4020225@db.yuiuvesktysmjiieakte.supabase.co:5432/postgres?sslmode=require"
 
 # NextAuth
 NEXTAUTH_SECRET="your-production-secret-key-different-from-dev"
@@ -156,6 +156,8 @@ NODE_ENV="production"
 # Optional
 NOTIFICATION_PROVIDER="mock"
 ```
+
+**Note**: Using the same Supabase database for both local and production. Only `NEXTAUTH_SECRET` and `NEXTAUTH_URL` differ between environments.
 
 ### For Migration (Temporary)
 ```env
