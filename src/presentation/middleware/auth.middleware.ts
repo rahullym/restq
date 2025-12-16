@@ -20,3 +20,4 @@ export async function requireRestaurantAccess(restaurantId: string) {
   }
   return session
 }
+

@@ -34,3 +34,4 @@ export const settingsSchema = z.object({
 export type QueueEntryInput = z.infer<typeof queueEntrySchema>
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>
 export type SettingsInput = z.infer<typeof settingsSchema>
+

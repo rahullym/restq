@@ -45,3 +45,4 @@ export class UpdateEntryStatusUseCase {
     return Result.ok(updateResult.data)
   }
 }
+

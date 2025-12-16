@@ -49,3 +49,4 @@ export class Restaurant {
     return { ...this.props }
   }
 }
+

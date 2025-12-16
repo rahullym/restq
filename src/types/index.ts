@@ -34,3 +34,4 @@ export interface UserSession {
   role: UserRole
   restaurantIds: string[]
 }
+

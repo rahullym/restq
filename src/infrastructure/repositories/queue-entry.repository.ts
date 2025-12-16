@@ -26,3 +26,4 @@ export interface IQueueEntryRepository {
   delete(id: string): Promise<Result<void>>
   clearCompleted(restaurantId: string): Promise<Result<number>>
 }
+

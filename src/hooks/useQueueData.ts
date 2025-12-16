@@ -127,3 +127,4 @@ export function useQueueData(restaurantId: string) {
     isCallingNext: callNextMutation.isPending,
   }
 }
+

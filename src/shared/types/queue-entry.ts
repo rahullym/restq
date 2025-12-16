@@ -35,3 +35,4 @@ export interface QueueFormData {
 export interface UpdateStatusRequest {
   status: QueueEntryStatus
 }
+

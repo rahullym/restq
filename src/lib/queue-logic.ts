@@ -379,3 +379,4 @@ export async function getNextInQueue(restaurantId: string) {
     },
   })
 }
+

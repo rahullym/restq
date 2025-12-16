@@ -10,3 +10,4 @@ export const Result = {
   ok: <T>(data: T): Result<T> => ({ success: true, data }),
   error: <E = Error>(error: E): Result<never, E> => ({ success: false, error }),
 }
+

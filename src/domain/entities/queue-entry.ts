@@ -118,3 +118,4 @@ export class QueueEntry {
     return { ...this.props }
   }
 }
+

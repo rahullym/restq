@@ -39,3 +39,4 @@ export const getQueuePositionUseCase = new GetQueuePositionUseCase(
 
 // Export repositories for direct use if needed
 export { queueEntryRepo, restaurantRepo, tokenSequenceRepo }
+

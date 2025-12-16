@@ -41,3 +41,4 @@ export class WaitTimeCalculator {
     return { minutes: totalMinutes, friendly: `about ${lower}-${upper} minutes` }
   }
 }
+
