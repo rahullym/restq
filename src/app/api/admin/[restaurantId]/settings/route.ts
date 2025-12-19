@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { settingsSchema } from '@/shared/validation/schemas'
 import { ApiResponse } from '@/shared/types/api'
 import { handleError } from '@/presentation/middleware/error-handler'
-import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { requireRole } from '@/presentation/middleware/auth.middleware'
+import { RestaurantRole } from '@prisma/client'
 import { restaurantRepo } from '@/infrastructure/di/container'
 
 /**
@@ -16,8 +17,8 @@ export async function POST(
   try {
     const { restaurantId } = await params
 
-    // Authentication and authorization
-    await requireRestaurantAccess(restaurantId)
+    // Authentication and authorization - requires RESTAURANT_ADMIN or above
+    await requireRole(restaurantId, RestaurantRole.RESTAURANT_ADMIN)
 
     // Parse and validate request body
     const body = await request.json()

@@ -8,39 +8,56 @@ import { Result } from '@/shared/types/result'
 export class PrismaTokenSequenceRepository implements ITokenSequenceRepository {
   constructor(private prisma: PrismaClient) {}
 
+  /**
+   * Generates a random 4-character alphanumeric token
+   * Characters: A-Z, 0-9 (36 possible characters)
+   */
+  private generateRandomToken(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let token = ''
+    for (let i = 0; i < 4; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return token
+  }
+
   async getNextToken(restaurantId: string, tx?: Prisma.TransactionClient): Promise<Result<string>> {
     const client = tx || this.prisma
+    const maxAttempts = 10
 
     try {
-      // Get or create token sequence for this restaurant
-      const sequence = await client.tokenSequence.upsert({
-        where: { restaurantId },
-        create: {
-          restaurantId,
-          currentValue: BigInt(0),
-        },
-        update: {},
-      })
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Generate a random 4-character alphanumeric token
+        const token = this.generateRandomToken()
 
-      // Atomically increment and get the new value
-      const result = await (tx || this.prisma).$queryRaw<Array<{ currentValue: bigint }>>`
-        UPDATE "TokenSequence"
-        SET "currentValue" = "currentValue" + 1,
-            "updatedAt" = NOW()
-        WHERE "restaurantId" = ${restaurantId}
-        RETURNING "currentValue"
-      `
+        // Check if token already exists for this restaurant
+        const existing = await client.queueEntry.findFirst({
+          where: {
+            restaurantId,
+            tokenNumber: token,
+          },
+          select: {
+            id: true,
+          },
+        })
 
-      const newValue =
-        result && result.length > 0
-          ? result[0].currentValue
-          : sequence.currentValue + BigInt(1)
+        // If token doesn't exist, return it
+        if (!existing) {
+          return Result.ok(token)
+        }
 
-      // Format: R{restaurantPrefix}-{sequenceNumber}
-      const restaurantPrefix = restaurantId.substring(0, 8).toUpperCase()
-      const tokenNumber = `${restaurantPrefix}-${newValue.toString().padStart(6, '0')}`
+        // If we've exhausted attempts, return an error
+        if (attempt === maxAttempts - 1) {
+          return Result.error(
+            new Error(
+              `Failed to generate unique token after ${maxAttempts} attempts. This is extremely rare.`
+            )
+          )
+        }
+      }
 
-      return Result.ok(tokenNumber)
+      // This should never be reached, but TypeScript needs it
+      return Result.error(new Error('Token generation failed'))
     } catch (error) {
       return Result.error(error instanceof Error ? error : new Error(String(error)))
     }

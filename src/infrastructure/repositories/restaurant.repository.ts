@@ -12,3 +12,5 @@ export interface IRestaurantRepository {
   delete(id: string): Promise<Result<void>>
 }
 
+
+

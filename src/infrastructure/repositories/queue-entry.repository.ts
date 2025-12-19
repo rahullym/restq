@@ -27,3 +27,5 @@ export interface IQueueEntryRepository {
   clearCompleted(restaurantId: string): Promise<Result<number>>
 }
 
+
+

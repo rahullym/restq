@@ -15,16 +15,27 @@ export default async function AdminDashboardPage() {
       redirect('/admin/login')
     }
 
-    // Get the first restaurant the user has access to (for MVP)
-    // In production, you'd want to allow selecting a restaurant
-    const restaurantId = session.user.restaurantIds[0]
+    // Get selected restaurant from session
+    let restaurantId = session.selectedRestaurantId
 
+    // Auto-select if only one restaurant
+    if (!restaurantId && session.user.restaurantMappings.length === 1) {
+      restaurantId = session.user.restaurantMappings[0].restaurantId
+    }
+
+    // If no restaurant selected, redirect to selection
     if (!restaurantId) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No restaurant assigned to your account.</p>
-        </div>
-      )
+      redirect('/admin/select-restaurant')
+    }
+
+    // Validate user has access to this restaurant
+    const hasAccess = session.user.restaurantMappings.some(
+      (m) => m.restaurantId === restaurantId
+    )
+
+    if (!hasAccess) {
+      // Invalid selection, redirect to selection
+      redirect('/admin/select-restaurant')
     }
 
     let restaurant
@@ -135,10 +146,9 @@ export default async function AdminDashboardPage() {
     }
 
     return (
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">{restaurant.name}</h1>
-          <p className="mt-2 text-gray-600">Manage your restaurant queue</p>
+      <div className="w-full">
+        <div className="mb-3 sm:mb-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{restaurant.name}</h1>
         </div>
 
         <QueueDashboard initialEntries={enrichedEntries} restaurantId={restaurantId} />
@@ -154,6 +164,8 @@ export default async function AdminDashboardPage() {
     throw error
   }
 }
+
+
 
 
 

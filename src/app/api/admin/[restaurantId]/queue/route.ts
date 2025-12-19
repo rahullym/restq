@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@/shared/types/api'
 import { handleError } from '@/presentation/middleware/error-handler'
-import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { requireRole } from '@/presentation/middleware/auth.middleware'
+import { RestaurantRole } from '@prisma/client'
 import { queueEntryRepo, restaurantRepo, getQueuePositionUseCase } from '@/infrastructure/di/container'
 import { WaitTimeCalculator } from '@/domain/services/wait-time-calculator'
 
@@ -16,8 +17,8 @@ export async function GET(
   try {
     const { restaurantId } = await params
 
-    // Authentication and authorization
-    await requireRestaurantAccess(restaurantId)
+    // Authentication and authorization - requires STAFF or above
+    await requireRole(restaurantId, RestaurantRole.STAFF)
 
     // Get restaurant
     const restaurant = await restaurantRepo.findById(restaurantId)

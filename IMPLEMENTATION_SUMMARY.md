@@ -189,3 +189,5 @@ WHERE id NOT IN (SELECT "restaurantId" FROM "TokenSequence")
 - See `prisma/migrations/concurrency-safety.sql` for migration SQL
 - See code comments in `src/lib/queue-logic.ts` for implementation details
 
+
+

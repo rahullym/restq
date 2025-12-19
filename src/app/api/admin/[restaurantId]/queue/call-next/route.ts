@@ -3,7 +3,8 @@ import { sendQueueCalledNotification } from '@/lib/notifications'
 import { ApiResponse } from '@/shared/types/api'
 import { logCallNext, incrementMetric } from '@/lib/logger'
 import { handleError } from '@/presentation/middleware/error-handler'
-import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { requireRole } from '@/presentation/middleware/auth.middleware'
+import { RestaurantRole } from '@prisma/client'
 import { callNextCustomerUseCase, restaurantRepo, getQueuePositionUseCase } from '@/infrastructure/di/container'
 import { WaitTimeCalculator } from '@/domain/services/wait-time-calculator'
 
@@ -20,8 +21,8 @@ export async function POST(
   try {
     const { restaurantId } = await params
 
-    // Authentication and authorization
-    const session = await requireRestaurantAccess(restaurantId)
+    // Authentication and authorization - requires STAFF or above
+    const { session } = await requireRole(restaurantId, RestaurantRole.STAFF)
 
     // Get restaurant
     const restaurant = await restaurantRepo.findById(restaurantId)

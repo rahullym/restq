@@ -376,3 +376,5 @@ return NextResponse.json({ data: result.data })
 - [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture/)
 - [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
 
+
+

@@ -16,60 +16,71 @@ import { QueueEntryStatus } from '@prisma/client'
  */
 
 /**
- * Generates the next token number atomically using database sequence.
+ * Generates a random 4-character alphanumeric token
+ * Characters: A-Z, 0-9 (36 possible characters)
+ */
+function generateRandomToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let token = ''
+  for (let i = 0; i < 4; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
+}
+
+/**
+ * Generates a unique 4-character alphanumeric token number.
  * 
- * Strategy: Option A - Per-restaurant database sequence
+ * This function ensures:
+ * 1. Uniqueness: Checks database to ensure token doesn't exist for the restaurant
+ * 2. Format: Exactly 4 alphanumeric characters (A-Z, 0-9)
+ * 3. Retry logic: Attempts up to 10 times to find a unique token
+ * 4. Atomicity: Works within transactions for consistency
  * 
- * Why this approach:
- * - Token generation happens inside DB transaction
- * - No race conditions: sequence increment is atomic
- * - Works correctly with multiple API instances
- * - No need for application-level locking
+ * Token format: 4 alphanumeric characters
+ * Example: A1B2, X9Y3, 0Z4K
  * 
- * Token format: R{restaurantSequence}-{sequenceNumber}
- * Example: R1-000123
- * 
- * Implementation uses Prisma's $executeRaw to increment sequence atomically.
+ * @param restaurantId - The restaurant ID (for uniqueness check scope)
+ * @param tx - Optional transaction client for atomic operations
+ * @returns Promise<string> - The generated unique token number
  */
 export async function generateTokenNumberAtomically(
   restaurantId: string,
   tx?: any
 ): Promise<string> {
   const client = tx || prisma
+  const maxAttempts = 10
 
-  // Get or create token sequence for this restaurant
-  const sequence = await client.tokenSequence.upsert({
-    where: { restaurantId },
-    create: {
-      restaurantId,
-      currentValue: BigInt(0),
-    },
-    update: {},
-  })
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Generate a random 4-character alphanumeric token
+    const token = generateRandomToken()
 
-  // Atomically increment and get the new value
-  // This uses PostgreSQL's atomic increment - no race conditions possible
-  // We use raw SQL because Prisma doesn't support RETURNING with increment
-  const result = await (tx || prisma).$queryRaw<Array<{ currentValue: bigint }>>`
-    UPDATE "TokenSequence"
-    SET "currentValue" = "currentValue" + 1,
-        "updatedAt" = NOW()
-    WHERE "restaurantId" = ${restaurantId}
-    RETURNING "currentValue"
-  `
+    // Check if token already exists for this restaurant
+    const existing = await client.queueEntry.findFirst({
+      where: {
+        restaurantId,
+        tokenNumber: token,
+      },
+      select: {
+        id: true,
+      },
+    })
 
-  // Extract the new sequence value
-  // PostgreSQL returns the updated value atomically
-  const newValue = result && result.length > 0 
-    ? result[0].currentValue 
-    : sequence.currentValue + BigInt(1)
-  
-  // Format: R{restaurantId}-{padded sequence number}
-  // Using first 8 chars of restaurantId for readability
-  const restaurantPrefix = restaurantId.substring(0, 8).toUpperCase()
-  const tokenNumber = `${restaurantPrefix}-${newValue.toString().padStart(6, '0')}`
+    // If token doesn't exist, return it
+    if (!existing) {
+      return token
+    }
 
-  return tokenNumber
+    // If we've exhausted attempts, throw an error
+    if (attempt === maxAttempts - 1) {
+      throw new Error(
+        `Failed to generate unique token after ${maxAttempts} attempts. This is extremely rare.`
+      )
+    }
+  }
+
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Token generation failed')
 }
 
 /**
@@ -379,4 +390,6 @@ export async function getNextInQueue(restaurantId: string) {
     },
   })
 }
+
+
 

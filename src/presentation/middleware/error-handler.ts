@@ -17,6 +17,50 @@ export class AppError extends Error {
   }
 }
 
+export class RestaurantNotFoundError extends AppError {
+  constructor(restaurantId?: string) {
+    super(
+      restaurantId ? `Restaurant not found: ${restaurantId}` : 'Restaurant not found',
+      404,
+      'RESTAURANT_NOT_FOUND'
+    )
+    this.name = 'RestaurantNotFoundError'
+  }
+}
+
+export class InsufficientPermissionsError extends AppError {
+  constructor(requiredRole?: string) {
+    super(
+      requiredRole
+        ? `Insufficient permissions. Required role: ${requiredRole}`
+        : 'Insufficient permissions',
+      403,
+      'INSUFFICIENT_PERMISSIONS'
+    )
+    this.name = 'InsufficientPermissionsError'
+  }
+}
+
+export class RestaurantInactiveError extends AppError {
+  constructor(restaurantId?: string) {
+    super(
+      restaurantId
+        ? `Restaurant is inactive: ${restaurantId}`
+        : 'Restaurant is inactive',
+      403,
+      'RESTAURANT_INACTIVE'
+    )
+    this.name = 'RestaurantInactiveError'
+  }
+}
+
+export class UserDisabledError extends AppError {
+  constructor() {
+    super('User account is disabled', 401, 'USER_DISABLED')
+    this.name = 'UserDisabledError'
+  }
+}
+
 export function handleError(error: unknown, context?: Record<string, unknown>) {
   // Log error
   logError('api.error', error instanceof Error ? error : new Error(String(error)), context)

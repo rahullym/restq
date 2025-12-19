@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import SettingsForm from '@/components/admin/SettingsForm'
+import { RestaurantRole } from '@prisma/client'
 
 export default async function SettingsPage() {
   try {
@@ -12,12 +13,36 @@ export default async function SettingsPage() {
       redirect('/admin/login')
     }
 
-    const restaurantId = session.user.restaurantIds[0]
+    // Get selected restaurant from session
+    let restaurantId = session.selectedRestaurantId
+
+    // Auto-select if only one restaurant
+    if (!restaurantId && session.user.restaurantMappings.length === 1) {
+      restaurantId = session.user.restaurantMappings[0].restaurantId
+    }
 
     if (!restaurantId) {
+      redirect('/admin/select-restaurant')
+    }
+
+    // Check user has RESTAURANT_ADMIN or SUPER_ADMIN role
+    const userMapping = session.user.restaurantMappings.find(
+      (m) => m.restaurantId === restaurantId
+    )
+
+    if (
+      !userMapping ||
+      (userMapping.role !== RestaurantRole.RESTAURANT_ADMIN &&
+        userMapping.role !== RestaurantRole.SUPER_ADMIN)
+    ) {
       return (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No restaurant assigned to your account.</p>
+        <div className="max-w-4xl mx-auto p-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-yellow-900 mb-2">Insufficient Permissions</h2>
+            <p className="text-yellow-800">
+              You need RESTAURANT_ADMIN or SUPER_ADMIN role to access settings.
+            </p>
+          </div>
         </div>
       )
     }
@@ -66,6 +91,8 @@ export default async function SettingsPage() {
     throw error
   }
 }
+
+
 
 
 

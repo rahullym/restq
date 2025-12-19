@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { updateStatusSchema } from '@/shared/validation/schemas'
 import { ApiResponse } from '@/shared/types/api'
 import { handleError } from '@/presentation/middleware/error-handler'
-import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { requireRole } from '@/presentation/middleware/auth.middleware'
+import { RestaurantRole } from '@prisma/client'
 import { updateEntryStatusUseCase, restaurantRepo, getQueuePositionUseCase } from '@/infrastructure/di/container'
 import { WaitTimeCalculator } from '@/domain/services/wait-time-calculator'
 import { logStatusTransition } from '@/lib/logger'
@@ -18,8 +19,8 @@ export async function POST(
   try {
     const { restaurantId, entryId } = await params
 
-    // Authentication and authorization
-    const session = await requireRestaurantAccess(restaurantId)
+    // Authentication and authorization - requires STAFF or above
+    const { session } = await requireRole(restaurantId, RestaurantRole.STAFF)
 
     // Parse and validate request body
     const body = await request.json()

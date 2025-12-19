@@ -9,19 +9,10 @@ export default function HomePage() {
           Restaurant Queue Management System
         </p>
         <div className="space-y-4">
-          <p className="text-gray-700">
-            Scan the QR code at the restaurant entrance to join the queue, or
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/demo-restaurant"
-              className="inline-block px-6 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700"
-            >
-              View Demo Restaurant
-            </Link>
-            <Link
               href="/admin/login"
-              className="inline-block px-6 py-3 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700"
+              className="inline-block px-6 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700"
             >
               Admin Login
             </Link>
@@ -31,6 +22,8 @@ export default function HomePage() {
     </div>
   )
 }
+
+
 
 
 

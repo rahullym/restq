@@ -2,7 +2,8 @@ import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
-import { UserRole } from '@prisma/client'
+import { UserRole, RestaurantRole, UserStatus } from '@prisma/client'
+import { checkRateLimit } from './rate-limit'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,20 +18,45 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Rate limit login attempts: 5 attempts per 15 minutes per email
+        const rateLimitResult = await checkRateLimit({
+          identifier: credentials.email,
+          type: 'mobile', // Reuse mobile type for email rate limiting
+          maxRequests: 5,
+          windowMinutes: 15,
+        })
+
+        if (!rateLimitResult.allowed) {
+          console.warn(`Login rate limit exceeded for: ${credentials.email}`)
+          return null
+        }
+
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
           },
           include: {
             restaurants: {
-              select: {
-                restaurantId: true,
+              include: {
+                restaurant: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    status: true,
+                  },
+                },
               },
             },
           },
         })
 
         if (!user) {
+          return null
+        }
+
+        // Check if user is active
+        if (user.status !== 'ACTIVE') {
           return null
         }
 
@@ -43,12 +69,21 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Build restaurant mappings with roles, only including active restaurants
+        const restaurantMappings = user.restaurants
+          .filter((ur) => ur.restaurant.status === 'ACTIVE')
+          .map((ur) => ({
+            restaurantId: ur.restaurantId,
+            role: ur.role,
+            restaurantName: ur.restaurant.name,
+            restaurantSlug: ur.restaurant.slug,
+          }))
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          restaurantIds: user.restaurants.map((r) => r.restaurantId),
+          restaurantMappings,
         }
       },
     }),
@@ -57,21 +92,39 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
-        token.role = user.role
-        // Type assertion needed because NextAuth User type doesn't include restaurantIds
+        // Type assertion needed because NextAuth User type doesn't include restaurantMappings
         // but we add it in the authorize function return value
-        token.restaurantIds = ('restaurantIds' in user ? user.restaurantIds : []) as string[]
+        token.restaurantMappings =
+          ('restaurantMappings' in user ? user.restaurantMappings : []) as Array<{
+            restaurantId: string
+            role: RestaurantRole
+            restaurantName: string
+            restaurantSlug: string
+          }>
       }
+      
+      // Handle selected restaurant updates from session.update() call
+      if (trigger === 'update' && session) {
+        if ('selectedRestaurantId' in session) {
+          token.selectedRestaurantId = session.selectedRestaurantId as string
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as UserRole
-        session.user.restaurantIds = (token.restaurantIds as string[]) || []
+        session.user.restaurantMappings = (token.restaurantMappings as Array<{
+          restaurantId: string
+          role: RestaurantRole
+          restaurantName: string
+          restaurantSlug: string
+        }>) || []
+        session.selectedRestaurantId = (token.selectedRestaurantId as string) || undefined
       }
       return session
     },
@@ -90,25 +143,39 @@ declare module 'next-auth' {
       id: string
       name: string
       email: string
-      role: UserRole
-      restaurantIds: string[]
+      restaurantMappings: Array<{
+        restaurantId: string
+        role: RestaurantRole
+        restaurantName: string
+        restaurantSlug: string
+      }>
     }
+    selectedRestaurantId?: string
   }
 
   interface User {
     id: string
     name: string
     email: string
-    role: UserRole
-    restaurantIds: string[]
+    restaurantMappings: Array<{
+      restaurantId: string
+      role: RestaurantRole
+      restaurantName: string
+      restaurantSlug: string
+    }>
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string
-    role: UserRole
-    restaurantIds: string[]
+    restaurantMappings: Array<{
+      restaurantId: string
+      role: RestaurantRole
+      restaurantName: string
+      restaurantSlug: string
+    }>
+    selectedRestaurantId?: string
   }
 }
 

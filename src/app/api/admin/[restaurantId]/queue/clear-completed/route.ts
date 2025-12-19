@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ApiResponse } from '@/shared/types/api'
 import { handleError } from '@/presentation/middleware/error-handler'
-import { requireRestaurantAccess } from '@/presentation/middleware/auth.middleware'
+import { requireRole } from '@/presentation/middleware/auth.middleware'
+import { RestaurantRole } from '@prisma/client'
 import { queueEntryRepo } from '@/infrastructure/di/container'
 
 /**
@@ -15,8 +16,8 @@ export async function POST(
   try {
     const { restaurantId } = await params
 
-    // Authentication and authorization
-    await requireRestaurantAccess(restaurantId)
+    // Authentication and authorization - requires STAFF or above
+    await requireRole(restaurantId, RestaurantRole.STAFF)
 
     // Clear completed entries
     const result = await queueEntryRepo.clearCompleted(restaurantId)

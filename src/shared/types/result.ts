@@ -11,3 +11,5 @@ export const Result = {
   error: <E = Error>(error: E): Result<never, E> => ({ success: false, error }),
 }
 
+
+

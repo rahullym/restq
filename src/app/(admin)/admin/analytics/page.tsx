@@ -13,14 +13,25 @@ export default async function AnalyticsPage() {
       redirect('/admin/login')
     }
 
-    const restaurantId = session.user.restaurantIds[0]
+    // Get selected restaurant from session
+    let restaurantId = session.selectedRestaurantId
+
+    // Auto-select if only one restaurant
+    if (!restaurantId && session.user.restaurantMappings.length === 1) {
+      restaurantId = session.user.restaurantMappings[0].restaurantId
+    }
 
     if (!restaurantId) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No restaurant assigned to your account.</p>
-        </div>
-      )
+      redirect('/admin/select-restaurant')
+    }
+
+    // Validate user has access to this restaurant
+    const hasAccess = session.user.restaurantMappings.some(
+      (m) => m.restaurantId === restaurantId
+    )
+
+    if (!hasAccess) {
+      redirect('/admin/select-restaurant')
     }
 
     let restaurant
@@ -117,6 +128,8 @@ export default async function AnalyticsPage() {
     throw error
   }
 }
+
+
 
 
 

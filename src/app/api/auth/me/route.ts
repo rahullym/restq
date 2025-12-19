@@ -23,8 +23,7 @@ export async function GET() {
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
-        role: session.user.role,
-        restaurantIds: session.user.restaurantIds,
+        restaurantMappings: session.user.restaurantMappings,
       },
     })
   } catch (error) {
@@ -38,6 +37,8 @@ export async function GET() {
     )
   }
 }
+
+
 
 
 
